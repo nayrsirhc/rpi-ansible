@@ -1,14 +1,11 @@
-- name: Install Raspberry PI Custom OS
+- name: Prepare system
   hosts: rpi
   become: true
 
   tasks:
-    - name: Update apt cache
-      ansible.builtin.apt:
-        update_cache: true
-
     - name: Remove Packages
       ansible.builtin.apt:
+        update_cache: true
         name: "{{ item }}"
         state: absent
       with_items:
@@ -33,9 +30,27 @@
         - libreoffice-writer
         - thunderbird
 
-    - name: Install Packages
+    - name: Install Required Packages
       ansible.builtin.apt:
         name: "{{ item }}"
         state: present
       with_items:
-        - wine64
+        - git
+        - vim
+        - gcc
+        - flex
+        - bison
+
+    - name: Clone Wine gitlab repo
+      ansible.builtin.git:
+        repo: https://gitlab.winehq.org/wine/wine.git
+        dest: /home/ansible/src/wine
+        version: wine-10.1
+        clone: true
+        update: true
+
+    - name: Configure Wine
+      ansible.builtin.shell:
+        cmd: |
+          cd /home/ansible/src/wine
+          ./configure --host=aarch64-linux-gnu host_alias=aarch64-linux-gnu --enable-win64
