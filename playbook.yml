@@ -1,9 +1,9 @@
 - name: Prepare system
   hosts: rpi
-  become: true
 
   tasks:
     - name: Remove Packages
+      become: true
       ansible.builtin.apt:
         update_cache: true
         name: "{{ item }}"
@@ -31,26 +31,105 @@
         - thunderbird
 
     - name: Install Required Packages
+      become: true
       ansible.builtin.apt:
         name: "{{ item }}"
         state: present
       with_items:
         - git
         - vim
-        - gcc
         - flex
         - bison
+        - libx11-dev
+        - clang
+        - libgnutls28-dev
+        - libopengl-dev
+        - libcups2-dev
+        - libsdl2-dev
+        - libudev-dev
+        - libusb-1.0-0-dev
+        - libosmesa6-dev
+        - libxcomposite-dev
+        - libpcap-dev
+        - libsane-dev
+        - libv4l-dev
+        - libgstreamer1.0-dev
+        - libvulkan-dev
+        - libkrb5-dev
+        - libfontconfig-dev
+        - libffms2-dev
+        - samba-dev
+        - opencl-headers
+        - ocl-icd-opencl-dev
+        - oss4-dev
+        - gettext
+        - lld
+
+    - name: Add Dezel User
+      become: true
+      ansible.builtin.user:
+        name: dezel
+        shell: /bin/bash
+        create_home: true
+        groups: sudo
+        append: true
+        password: "$y$j9T$aQmD3m1Y99kWcQ4slkBYj.$amw1mJl9EhVNb5ziaTI5ue4KcSVjgjZyEYNWgIgYMVC"
 
     - name: Clone Wine gitlab repo
       ansible.builtin.git:
         repo: https://gitlab.winehq.org/wine/wine.git
-        dest: /home/ansible/src/wine
+        dest: /home/dezel/src/wine
         version: wine-10.1
         clone: true
         update: true
+      become: true
+      become_user: dezel
 
     - name: Configure Wine
       ansible.builtin.shell:
         cmd: |
-          cd /home/ansible/src/wine
+          cd /home/dezel/src/wine
           ./configure --host=aarch64-linux-gnu host_alias=aarch64-linux-gnu --enable-win64
+      register: result
+      changed_when: result.rc == 0
+      become: true
+      become_user: dezel
+
+    - name: Debug Configure
+      ansible.builtin.debug:
+        var: result.stderr
+
+    - name: Make Wine
+      community.general.make:
+        chdir: /home/dezel/src/wine
+      become: true
+      become_user: dezel
+
+    - name: Create Applications Directory
+      ansible.builtin.file:
+        path: '{{ item }}'
+        state: directory
+        mode: '0755'
+      become: true
+      become_user: dezel
+      loop:
+        - /home/dezel/Applications
+        - /home/dezel/Applications/LabelReprintingCore
+
+    - name: Copy LabelReprintingCore_arm64.zip
+      ansible.builtin.copy:
+        src: ./LabelReprintingCore_arm64.zip
+        dest: /tmp/LabelReprintingCore_arm64.zip
+        owner: dezel
+        group: dezel
+        mode: '0744'
+      become: true
+      become_user: dezel
+
+    - name: Unarchive a file that is already on the remote machine
+      ansible.builtin.unarchive:
+        src: /tmp/LabelReprintingCore_arm64.zip
+        dest: /home/dezel/Applications/LabelReprintingCore
+        remote_src: true
+      become: true
+      become_user: dezel
