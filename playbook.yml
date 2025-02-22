@@ -115,21 +115,30 @@
       loop:
         - /home/dezel/Applications
         - /home/dezel/Applications/LabelReprintingCore
+        - /home/dezel/Applications/TEST_ARGOX_LABEL_PRINTING
 
-    - name: Copy LabelReprintingCore_arm64.zip
+    - name: Copy Files
       ansible.builtin.copy:
-        src: ./LabelReprintingCore_arm64.zip
-        dest: /tmp/LabelReprintingCore_arm64.zip
+        src: '{{ item.src }}'
+        dest: '{{ item.dest }}'
         owner: dezel
         group: dezel
         mode: '0744'
       become: true
       become_user: dezel
+      loop:
+        - { src: './LabelReprintingCore_arm64.zip', dest: '/tmp/LabelReprintingCore_arm64.zip' }
+        - { src: './LabelReprintingCore.desktop', dest: '/home/dezel/Desktop/LabelReprintingCore.desktop' }
+        - { src: './TEST_ARGOX_LABEL_PRINTING_arm64.zip', dest: '/tmp/TEST_ARGOX_LABEL_PRINTING_arm64.zip' }
+        - { src: ;./TEST_ARGOX_LABEL_PRINTING.desktop, dest: '/home/dezel/Desktop/TEST_ARGOX_LABEL_PRINTING.desktop' }
 
-    - name: Unarchive a file that is already on the remote machine
+    - name: Unpack Zip File
       ansible.builtin.unarchive:
         src: /tmp/LabelReprintingCore_arm64.zip
         dest: /home/dezel/Applications/LabelReprintingCore
         remote_src: true
       become: true
       become_user: dezel
+      loop:
+        - { src: '/tmp/LabelReprintingCore_arm64.zip', dest: '/home/dezel/Applications/LabelReprintingCore' }
+        - { src: '/tmp/TEST_ARGOX_LABEL_PRINTING_arm64.zip', dest: '/home/dezel/Applications/TEST_ARGOX_LABEL_PRINTING' }

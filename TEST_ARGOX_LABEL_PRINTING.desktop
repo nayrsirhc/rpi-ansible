@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=TEST_ARGOX_LABEL_PRINTING
+Exec=/home/dezel/src/wine/wine /home/dezel/Applications/TEST_ARGOX_LABEL_PRINTING/TEST_ARGOX_LABEL_PRINTING.exe
+Icon=/home/dezel/Applications/LabelReprintingCore/Reprint.ico
