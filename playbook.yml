@@ -117,6 +117,40 @@
         - /home/dezel/Applications/LabelReprintingCore
         - /home/dezel/Applications/TEST_ARGOX_LABEL_PRINTING
 
+
+    - name: Remove Dev Dependencies
+      ansible.builtin.apt:
+        name: '{{ item }}'
+        state: absent
+      become: true
+      with_items:
+        - flex
+        - bison
+        - libx11-dev
+        - clang
+        - libgnutls28-dev
+        - libopengl-dev
+        - libcups2-dev
+        - libsdl2-dev
+        - libudev-dev
+        - libusb-1.0-0-dev
+        - libosmesa6-dev
+        - libxcomposite-dev
+        - libpcap-dev
+        - libsane-dev
+        - libv4l-dev
+        - libgstreamer1.0-dev
+        - libvulkan-dev
+        - libkrb5-dev
+        - libfontconfig-dev
+        - libffms2-dev
+        - samba-dev
+        - opencl-headers
+        - ocl-icd-opencl-dev
+        - oss4-dev
+        - gettext
+        - lld
+
     - name: Copy Files
       ansible.builtin.copy:
         src: '{{ item.src }}'
@@ -155,3 +189,26 @@
         - TEST_ARGOX_LABEL_PRINTING
       register: cmd_result
       changed_when: cmd_result.rc == 0
+
+    - name: Download RPI ARGOX Drivers
+      ansible.builtin.uri:
+        url: https://www.argox.com/docfile/drivers/ARGOX_RPi_Printer_Driver-V1.9.1(arm64).tar.gz
+        dest: /tmp/ARGOX_RPI_Printer.tar.gz
+        creates: /tmp/ARGOX_RPI_Printer.tar.gz
+
+    - name: Unpack RPI ARGOX Drivers
+      ansible.builtin.unarchive:
+        src: /tmp/ARGOX_RPI_Printer.tar.gz
+        dest: /tmp/ARGOX_RPi_Printer_Driver-V1.9.1(arm64)
+        creates: /tmp/ARGOX_RPi_Printer_Driver-V1.9.1(arm64)
+        remote_src: true
+
+    - name: Run Install Script
+      ansible.builtin.shell:
+        cmd: |
+          sudo ./install
+        chdir: /tmp/ARGOX_RPi_Printer_Driver-V1.9.1(arm64)
+        creates: /usr/share/cups/model/argox
+      become: true
+      register: result
+      changed_when: result.rc == 0
