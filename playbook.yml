@@ -130,15 +130,28 @@
         - { src: './LabelReprintingCore_arm64.zip', dest: '/tmp/LabelReprintingCore_arm64.zip' }
         - { src: './LabelReprintingCore.desktop', dest: '/home/dezel/Desktop/LabelReprintingCore.desktop' }
         - { src: './TEST_ARGOX_LABEL_PRINTING_arm64.zip', dest: '/tmp/TEST_ARGOX_LABEL_PRINTING_arm64.zip' }
-        - { src: ;./TEST_ARGOX_LABEL_PRINTING.desktop, dest: '/home/dezel/Desktop/TEST_ARGOX_LABEL_PRINTING.desktop' }
+        - { src: './TEST_ARGOX_LABEL_PRINTING.desktop', dest: '/home/dezel/Desktop/TEST_ARGOX_LABEL_PRINTING.desktop' }
 
     - name: Unpack Zip File
       ansible.builtin.unarchive:
-        src: /tmp/LabelReprintingCore_arm64.zip
-        dest: /home/dezel/Applications/LabelReprintingCore
+        src: '{{ item.src }}'
+        dest: '{{ item.dest }}'
         remote_src: true
       become: true
       become_user: dezel
       loop:
         - { src: '/tmp/LabelReprintingCore_arm64.zip', dest: '/home/dezel/Applications/LabelReprintingCore' }
         - { src: '/tmp/TEST_ARGOX_LABEL_PRINTING_arm64.zip', dest: '/home/dezel/Applications/TEST_ARGOX_LABEL_PRINTING' }
+
+    - name: Allow Launching
+      ansible.builtin.shell:
+        cmd: |
+          sudo -u dezel -g dezel dbus-launch gio set {{ item }}.desktop "metadata::trusted" true
+        chdir: /home/dezel/Desktop
+      become: true
+      become_user: dezel
+      loop:
+        - LabelReprintingCore
+        - TEST_ARGOX_LABEL_PRINTING
+      register: cmd_result
+      changed_when: cmd_result.rc == 0
