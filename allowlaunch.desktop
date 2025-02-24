@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Allow Launching
+Exec=gio set $HOME/Desktop/LabelReprintingCore.desktop "metadata::trusted" true
+Icon=/opt/LabelReprintingCore/Reprint.ico
+Comment=Allow Shortcut to Launch automatically
+X-GNOME-Autostart-enabled=true

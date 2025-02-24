@@ -29,15 +29,33 @@
         - libreoffice-uiconfig-writer
         - libreoffice-writer
         - thunderbird
+        - rhythmbox
+        - shotwell
+        - firefox
+        - xfburn
 
-    - name: Install Required Packages
+    - name: Check whether wine exists
+      ansible.builtin.stat:
+        path: /usr/local/bin/wine
+      register: wine_path
+
+    - name: Install Required Software
       become: true
       ansible.builtin.apt:
         name: "{{ item }}"
         state: present
       with_items:
+        - chromium-browser
+        - xscreensaver
+
+    - name: Install Required Packages
+      become: true
+      when: 'not wine_path.stat.exists'
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
         - git
-        - vim
         - flex
         - bison
         - libx11-dev
@@ -75,35 +93,48 @@
         append: true
         password: "$y$j9T$aQmD3m1Y99kWcQ4slkBYj.$amw1mJl9EhVNb5ziaTI5ue4KcSVjgjZyEYNWgIgYMVC"
 
+    - name: Add User
+      become: true
+      ansible.builtin.user:
+        name: user
+        shell: /bin/bash
+        create_home: true
+        password: $y$j9T$.yQrBSYQVFJo.mR8Kvfl/1$enLArSW4pASiI2tg0LFg1sKh7QZVibrGzGWd2.xCtGB
+
     - name: Clone Wine gitlab repo
+      when: 'not wine_path.stat.exists'
       ansible.builtin.git:
         repo: https://gitlab.winehq.org/wine/wine.git
-        dest: /home/dezel/src/wine
+        dest: /home/ansible/src/wine
         version: wine-10.1
         clone: true
         update: true
-      become: true
-      become_user: dezel
 
     - name: Configure Wine
+      when: 'not wine_path.stat.exists'
       ansible.builtin.shell:
         cmd: |
-          cd /home/dezel/src/wine
+          cd /home/ansible/src/wine
           ./configure --host=aarch64-linux-gnu host_alias=aarch64-linux-gnu --enable-win64
       register: result
       changed_when: result.rc == 0
-      become: true
-      become_user: dezel
 
     - name: Debug Configure
+      when: 'not wine_path.stat.exists'
       ansible.builtin.debug:
         var: result.stderr
 
     - name: Make Wine
+      when: 'not wine_path.stat.exists'
       community.general.make:
-        chdir: /home/dezel/src/wine
+        chdir: /home/ansible/src/wine
+
+    - name: Install Wine
+      when: 'not wine_path.stat.exists'
+      community.general.make:
+        target: install
+        chdir: /home/ansible/src/wine
       become: true
-      become_user: dezel
 
     - name: Create Applications Directory
       ansible.builtin.file:
@@ -111,11 +142,11 @@
         state: directory
         mode: '0755'
       become: true
-      become_user: dezel
       loop:
-        - /home/dezel/Applications
-        - /home/dezel/Applications/LabelReprintingCore
-        - /home/dezel/Applications/TEST_ARGOX_LABEL_PRINTING
+        - /etc/skel/Desktop
+        - /etc/skel/.config
+        - /etc/skel/.config/autostart
+        - /opt/LabelReprintingCore
 
 
     - name: Remove Dev Dependencies
@@ -155,16 +186,16 @@
       ansible.builtin.copy:
         src: '{{ item.src }}'
         dest: '{{ item.dest }}'
-        owner: dezel
-        group: dezel
+        owner: '{{ item.owner }}'
+        group: '{{ item.group }}'
         mode: '0744'
       become: true
-      become_user: dezel
       loop:
-        - { src: './LabelReprintingCore_arm64.zip', dest: '/tmp/LabelReprintingCore_arm64.zip' }
-        - { src: './LabelReprintingCore.desktop', dest: '/home/dezel/Desktop/LabelReprintingCore.desktop' }
-        - { src: './TEST_ARGOX_LABEL_PRINTING_arm64.zip', dest: '/tmp/TEST_ARGOX_LABEL_PRINTING_arm64.zip' }
-        - { src: './TEST_ARGOX_LABEL_PRINTING.desktop', dest: '/home/dezel/Desktop/TEST_ARGOX_LABEL_PRINTING.desktop' }
+        - { src: './LabelReprintingCore_arm64.zip', dest: '/tmp/LabelReprintingCore_arm64.zip', owner: ansible, group: ansible }
+        - { src: './LabelReprintingCore.desktop', dest: '/etc/skel/Desktop/LabelReprintingCore.desktop', owner: root, group: root }
+        - { src: './allowlaunch.desktop', dest: '/etc/skel/.config/autostart/allowlaunch.desktop', owner: root, group: root }
+        # - { src: './TEST_ARGOX_LABEL_PRINTING_arm64.zip', dest: '/tmp/TEST_ARGOX_LABEL_PRINTING_arm64.zip', owner: ansible, group: ansible }
+        # - { src: './TEST_ARGOX_LABEL_PRINTING.desktop', dest: '/etc/skel/Desktop/TEST_ARGOX_LABEL_PRINTING.desktop', owner: root, group: root }
 
     - name: Unpack Zip File
       ansible.builtin.unarchive:
@@ -172,23 +203,21 @@
         dest: '{{ item.dest }}'
         remote_src: true
       become: true
-      become_user: dezel
       loop:
-        - { src: '/tmp/LabelReprintingCore_arm64.zip', dest: '/home/dezel/Applications/LabelReprintingCore' }
-        - { src: '/tmp/TEST_ARGOX_LABEL_PRINTING_arm64.zip', dest: '/home/dezel/Applications/TEST_ARGOX_LABEL_PRINTING' }
+        - { src: '/tmp/LabelReprintingCore_arm64.zip', dest: '/opt/LabelReprintingCore' }
 
-    - name: Allow Launching
-      ansible.builtin.shell:
-        cmd: |
-          sudo -u dezel -g dezel dbus-launch gio set {{ item }}.desktop "metadata::trusted" true
-        chdir: /home/dezel/Desktop
-      become: true
-      become_user: dezel
-      loop:
-        - LabelReprintingCore
-        - TEST_ARGOX_LABEL_PRINTING
-      register: cmd_result
-      changed_when: cmd_result.rc == 0
+    # - name: Allow Launching
+    #   ansible.builtin.shell:
+    #     cmd: |
+    #       sudo -u dezel -g dezel dbus-launch gio set {{ item }}.desktop "metadata::trusted" true
+    #     chdir: /home/dezel/Desktop
+    #   become: true
+    #   become_user: dezel
+    #   loop:
+    #     - LabelReprintingCore
+    #     - TEST_ARGOX_LABEL_PRINTING
+    #   register: cmd_result
+    #   changed_when: cmd_result.rc == 0
 
     - name: Download RPI ARGOX Drivers
       ansible.builtin.uri:
@@ -199,7 +228,7 @@
     - name: Unpack RPI ARGOX Drivers
       ansible.builtin.unarchive:
         src: /tmp/ARGOX_RPI_Printer.tar.gz
-        dest: /tmp/ARGOX_RPi_Printer_Driver-V1.9.1(arm64)
+        dest: /tmp/
         creates: /tmp/ARGOX_RPi_Printer_Driver-V1.9.1(arm64)
         remote_src: true
 
@@ -212,3 +241,29 @@
       become: true
       register: result
       changed_when: result.rc == 0
+
+    - name: Remove Snaps
+      community.general.snap:
+        name: '{{ item }}'
+        state: absent
+      become: true
+      loop:
+        - thunderbird
+        - snap-store
+        - firefox
+
+    - name: Install Anydesk
+      become: true
+      ansible.builtin.apt:
+        deb: https://download.anydesk.com/rpi/anydesk_6.4.0-1_arm64.deb
+
+    - name: Install NoMachine
+      become: true
+      ansible.builtin.apt:
+        deb: https://download.nomachine.com/download/8.16/Raspberry/nomachine_8.16.1_1_arm64.deb
+
+    - name: Final Clean Up
+      become: true
+      ansible.builtin.apt:
+        autoremove: true
+        autoclean: true

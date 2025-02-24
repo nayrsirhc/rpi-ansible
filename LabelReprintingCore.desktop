@@ -1,5 +1,5 @@
 [Desktop Entry]
 Type=Application
 Name=LabelReprintingCore
-Exec=/home/dezel/src/wine/wine /home/dezel/Applications/LabelReprintingCore/LabelReprintingCore.exe
-Icon=/home/dezel/Applications/LabelReprintingCore/Reprint.ico
+Exec=/usr/local/bin/wine /opt/LabelReprintingCore/LabelReprintingCore.exe
+Icon=/opt/LabelReprintingCore/Reprint.ico
