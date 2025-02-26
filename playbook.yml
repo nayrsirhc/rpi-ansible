@@ -47,6 +47,7 @@
       with_items:
         - chromium-browser
         - xscreensaver
+        - winbind
 
     - name: Install Required Packages
       become: true
